@@ -12,11 +12,11 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [vacationRequests, setVacationRequests] = useState([]);
 
   useEffect(() => {
-    // Escuchar solicitudes en tiempo real desde Firestore
-    const unsubscribe = onSnapshot(collection(db, "solicitudes"), (snapshot) => {
+    // 🔥 Escuchar solicitudes en tiempo real desde la colección unificada
+    const unsubscribe = onSnapshot(collection(db, "vacationRequests"), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Requirement: mostrar solo aprobadas
-      const approvedOnly = data.filter(req => req.estado === 'aprobado');
+      // Mostrar solo aprobadas
+      const approvedOnly = data.filter(req => req.status === 'approved');
       setVacationRequests(approvedOnly);
     });
 
@@ -67,17 +67,16 @@ const AdminDashboard = ({ user, onLogout }) => {
           className="mt-8"
         >
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-             <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                  <CheckCircle className="w-5 h-5 mr-2 text-green-600" />
-                  Solicitudes Aprobadas
-                </h2>
-             </div>
-             
-             <AdminVacationTable
-                requests={vacationRequests}
-                readOnly={true} // Prop para ocultar acciones
-              />
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                <CheckCircle className="w-5 h-5 mr-2 text-green-600" />
+                Solicitudes Aprobadas
+              </h2>
+            </div>
+            <AdminVacationTable
+              requests={vacationRequests}
+              readOnly={true}
+            />
           </div>
         </motion.div>
       </main>
