@@ -4,21 +4,21 @@ import LoginPage from './components/LoginPage';
 import EmployeeDashboard from './components/EmployeeDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import { Toaster } from './components/ui/toaster';
-import { useToast } from './components/ui/use-toast';   // 👈 Importa el hook
+import { useToast } from './components/ui/use-toast';
 import { db } from './firebase';
-import { collection, addDoc, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [solicitudes, setSolicitudes] = useState([]);
-  const { toast } = useToast();   // 👈 Inicializa el hook
+  const [vacationRequests, setVacationRequests] = useState([]);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Escuchar solicitudes en tiempo real desde Firestore
-    const unsubscribe = onSnapshot(collection(db, "solicitudes"), (snapshot) => {
+    // 🔥 Escuchar solicitudes en tiempo real desde la colección unificada
+    const unsubscribe = onSnapshot(collection(db, "vacationRequests"), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setSolicitudes(data);
+      setVacationRequests(data);
     });
 
     setIsLoading(false);
@@ -27,59 +27,21 @@ function App() {
 
   const handleLogin = async (employee) => {
     setCurrentUser(employee);
-
-    // 🔥 Toast de login exitoso
     toast({
       title: "Bienvenido",
       description: `Has iniciado sesión como ${employee.name}`,
-      variant: "success",
+      variant: "default",
     });
-
     return true;
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-
-    // 🔥 Toast de logout
     toast({
       title: "Sesión cerrada",
       description: "Has cerrado sesión correctamente",
       variant: "default",
     });
-  };
-
-  const handleVacationRequest = async (fechaInicio, fechaFin) => {
-    if (!currentUser) return;
-
-    try {
-      await addDoc(collection(db, "solicitudes"), {
-        empleadoId: currentUser.id,
-        nombre: currentUser.name,
-        role: currentUser.role,
-        fechaInicio,
-        fechaFin,
-        estado: "pendiente",
-        createdAt: new Date()
-      });
-
-      // 🔥 Toast de éxito
-      toast({
-        title: "Solicitud enviada",
-        description: "Tus vacaciones se han registrado correctamente",
-        variant: "success",
-      });
-
-    } catch (e) {
-      console.error("Error al guardar solicitud: ", e);
-
-      // 🔥 Toast de error
-      toast({
-        title: "Error",
-        description: "No se pudo guardar la solicitud",
-        variant: "destructive",
-      });
-    }
   };
 
   if (isLoading) {
@@ -95,10 +57,13 @@ function App() {
       <>
         <Helmet>
           <title>Sistema de Gestión de Vacaciones - Inicio de Sesión</title>
-          <meta name="description" content="Sistema de gestión de vacaciones para empleados. Ingrese con su ID de empleado para solicitar y administrar sus vacaciones." />
+          <meta
+            name="description"
+            content="Sistema de gestión de vacaciones para empleados. Ingrese con su ID de empleado para solicitar y administrar sus vacaciones."
+          />
         </Helmet>
         <LoginPage onLogin={handleLogin} />
-        <Toaster /> {/* 👈 Siempre montado */}
+        <Toaster />
       </>
     );
   }
@@ -108,9 +73,12 @@ function App() {
       <>
         <Helmet>
           <title>Panel de Administración - Gestión de Vacaciones</title>
-          <meta name="description" content="Panel de administración para gestionar todas las solicitudes de vacaciones de empleados." />
+          <meta
+            name="description"
+            content="Panel de administración para gestionar todas las solicitudes de vacaciones de empleados."
+          />
         </Helmet>
-        <AdminDashboard user={currentUser} solicitudes={solicitudes} onLogout={handleLogout} />
+        <AdminDashboard user={currentUser} onLogout={handleLogout} />
         <Toaster />
       </>
     );
@@ -120,14 +88,12 @@ function App() {
     <>
       <Helmet>
         <title>Mi Panel de Vacaciones - {currentUser.name}</title>
-        <meta name="description" content="Solicite y administre sus períodos de vacaciones de forma fácil y rápida." />
+        <meta
+          name="description"
+          content="Solicite y administre sus períodos de vacaciones de forma fácil y rápida."
+        />
       </Helmet>
-      <EmployeeDashboard
-        user={currentUser}
-        onLogout={handleLogout}
-        onRequestVacation={handleVacationRequest}
-        solicitudes={solicitudes}
-      />
+      <EmployeeDashboard user={currentUser} onLogout={handleLogout} />
       <Toaster />
     </>
   );
