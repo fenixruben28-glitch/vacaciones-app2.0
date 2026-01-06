@@ -6,64 +6,35 @@ import VacationCalendar from '../components/VacationCalendar';
 import VacationRequestForm from '../components/VacationRequestForm';
 import { useToast } from '../components/ui/use-toast';
 import { db } from '../firebase';
-import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
-
-// Función auxiliar para calcular días entre dos fechas
-const calcularDias = (inicio, fin) => {
-  const start = new Date(inicio);
-  const end = new Date(fin);
-  const diffTime = Math.abs(end - start);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-};
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 
 const EmployeeDashboard = ({ user, onLogout }) => {
-  const [vacationRequest, setVacationRequest] = useState(null);
-  const [daysUsed, setDaysUsed] = useState(0);
-  const maxDays = 10;
+  const [vacationRequests, setVacationRequests] = useState([]);
+  const [remainingDays, setRemainingDays] = useState(10);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Escuchar solicitudes del empleado en tiempo real
-    const q = query(collection(db, "solicitudes"), where("empleadoId", "==", user.id));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      if (data.length > 0) {
-        const req = data[0];
-        setVacationRequest(req);
-        setDaysUsed(calcularDias(req.fechaInicio, req.fechaFin));
-      } else {
-        setVacationRequest(null);
-        setDaysUsed(0);
+    // 🔥 Escuchar solicitudes del empleado en tiempo real (colección unificada)
+    const q = query(collection(db, "vacationRequests"), where("employeeId", "==", user.id));
+    const unsubscribeReqs = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      setVacationRequests(data);
+    });
+
+    // 🔥 Escuchar días restantes en tiempo real desde empleados
+    const userRef = doc(db, "empleados", user.id);
+    const unsubscribeUser = onSnapshot(userRef, (snap) => {
+      if (snap.exists()) {
+        const val = snap.data().diasRestantes;
+        if (typeof val === 'number') setRemainingDays(val);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeReqs();
+      unsubscribeUser();
+    };
   }, [user.id]);
-
-  const handleRequestSubmit = async (request) => {
-    try {
-      await addDoc(collection(db, "solicitudes"), {
-        empleadoId: user.id,
-        nombre: user.name,
-        puesto: user.position,
-        sucursal: user.branch,
-        departamento: user.department,
-        fechaInicio: request.fechaInicio,
-        fechaFin: request.fechaFin,
-        estado: "pendiente",
-        createdAt: new Date()
-      });
-
-      toast({
-        title: 'Solicitud enviada',
-        description: 'Su solicitud de vacaciones ha sido registrada exitosamente.',
-      });
-    } catch (e) {
-      console.error("Error al guardar solicitud: ", e);
-    }
-  };
-
-  const remainingDays = maxDays - daysUsed;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -105,7 +76,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
             <div className="flex items-center space-x-2 bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100">
                <Clock className="w-4 h-4 text-indigo-600" />
                <span className="text-sm font-medium text-indigo-800">
-                 Días Disponibles: <span className="font-bold text-lg">{remainingDays}</span> / {maxDays}
+                 Días Disponibles: <span className="font-bold text-lg">{remainingDays}</span> / 10
                </span>
             </div>
           </div>
@@ -156,12 +127,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
           transition={{ duration: 0.5, delay: 0.4 }}
           className="mt-8"
         >
-          <VacationRequestForm
-            user={user}
-            onSubmit={handleRequestSubmit}
-            existingRequest={vacationRequest}
-            remainingDays={remainingDays}
-          />
+          <VacationRequestForm user={user} />
         </motion.div>
       </main>
     </div>
