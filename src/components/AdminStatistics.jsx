@@ -2,21 +2,20 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Users, Calendar, CheckCircle, TrendingUp } from 'lucide-react';
 
-// Función auxiliar para calcular días entre dos fechas
-const calcularDias = (inicio, fin) => {
-  const start = new Date(inicio);
-  const end = new Date(fin);
-  const diffTime = Math.abs(end - start);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // incluye el día inicial
-};
-
 const AdminStatistics = ({ requests, employees }) => {
+  // Total de empleados con rol "employee"
   const totalEmployees = employees.filter(emp => emp.role === 'employee').length;
-  const employeesWithRequests = new Set(requests.map(req => req.empleadoId)).size;
-  const approvedRequests = requests.filter(req => req.estado === 'aprobado').length;
+
+  // Empleados que tienen al menos una solicitud
+  const employeesWithRequests = new Set(requests.map(req => req.employeeId)).size;
+
+  // Solicitudes aprobadas
+  const approvedRequests = requests.filter(req => req.status === 'approved').length;
+
+  // Total de días utilizados en solicitudes aprobadas
   const totalDaysRequested = requests
-    .filter(req => req.estado === 'aprobado')
-    .reduce((sum, req) => sum + calcularDias(req.fechaInicio, req.fechaFin), 0);
+    .filter(req => req.status === 'approved')
+    .reduce((sum, req) => sum + (req.dates?.length || 0), 0);
 
   const stats = [
     {
