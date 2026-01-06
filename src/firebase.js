@@ -1,4 +1,3 @@
-// src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
@@ -13,13 +12,9 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
-
-// Firestore
 const db = getFirestore(app);
 
-// Analytics (solo navegador)
 let analytics;
 if (typeof window !== "undefined") {
   analytics = getAnalytics(app);

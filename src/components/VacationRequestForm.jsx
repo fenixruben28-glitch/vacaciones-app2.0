@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { db } from '@/firebase';
 import { collection, setDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { updateRemainingDays } from '@/services/vacaciones'; // 👈 Importamos la función
 
 const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays }) => {
   const [startDate, setStartDate] = useState('');
@@ -108,6 +109,9 @@ const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays })
 
     // 🔥 Guardar en Firestore
     await setDoc(doc(collection(db, "vacationRequests"), request.id), request);
+
+    // 🔥 Actualizar días restantes del usuario
+    await updateRemainingDays(user.id, dates.length);
 
     toast({ title: 'Solicitud enviada', description: 'Tus vacaciones se han registrado correctamente', variant: 'success' });
 
