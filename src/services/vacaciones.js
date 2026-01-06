@@ -18,30 +18,38 @@ import { db } from "@/firebase";
 export async function getVacations(currentUserId, sucursal) {
   let q;
   if (currentUserId === "ADMIN001") {
-    q = query(collection(db, "vacationRequests")); // 🔥 Admin ve todas
+    q = query(collection(db, "vacationRequests")); // Admin ve todas
   } else {
     q = query(collection(db, "vacationRequests"), where("branch", "==", sucursal));
   }
 
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => doc.data());
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
 /**
  * Guardar una nueva solicitud de vacaciones
+ * Recomendado: usar VacationRequestForm.jsx para crear solicitudes,
+ * pero esta función sirve si quieres hacerlo desde servicios.
  */
-export async function requestVacation(userId, sucursal, startDate, endDate) {
-  const requestedDays = getDateRange(startDate, endDate);
+export async function requestVacation(user, startDate, endDate) {
+  const dates = getDateRange(startDate, endDate);
 
   await addDoc(collection(db, "vacationRequests"), {
-    employeeId: userId,
-    sucursal,
-    days: requestedDays,
-    createdAt: new Date(),
-    status: "approved",
+    employeeId: user.id,
+    employeeName: user.name,
+    position: user.position,
+    branch: user.branch,
+    department: user.department,
+    dates,
+    startDate,
+    endDate,
+    status: "pending", // 👈 por defecto pendiente, luego admin aprueba/rechaza
+    createdAt: new Date().toISOString(),
   });
 
-  await updateRemainingDays(userId, requestedDays.length);
+  // Actualizar días restantes
+  await updateRemainingDays(user.id, dates.length);
 }
 
 /**
@@ -54,7 +62,7 @@ export async function updateRemainingDays(userId, requestedDaysCount) {
 
   if (userSnap.exists()) {
     const data = userSnap.data();
-    const diasRestantesActuales = data.diasRestantes ?? 10;
+    const diasRestantesActuales = typeof data.diasRestantes === 'number' ? data.diasRestantes : 10;
     const nuevosDiasRestantes = Math.max(0, diasRestantesActuales - requestedDaysCount);
 
     await updateDoc(userRef, {
