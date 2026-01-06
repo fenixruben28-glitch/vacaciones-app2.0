@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, CheckCircle, Info, Ban } from 'lucide-react';
+import { Send, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { db } from '@/firebase';
-import { collection, setDoc, doc, getDocs, query, where } from 'firebase/firestore';
-import { updateRemainingDays } from '@/services/vacaciones'; // 👈 Importamos la función
+import { collection, setDoc, doc, getDocs, query, where, getDoc } from 'firebase/firestore';
+import { updateRemainingDays } from '@/services/vacaciones';
 
 const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays }) => {
   const [startDate, setStartDate] = useState('');
@@ -55,7 +55,7 @@ const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays })
       validationErrors.push('Las fechas deben estar dentro del periodo: 16 Ene 2026 - 15 Ene 2027');
     }
 
-    // Rule 3: Branch overlap check (consultando Firestore)
+    // Rule 3: Branch overlap check
     const q = query(collection(db, 'vacationRequests'), where('branch', '==', user.branch));
     const snapshot = await getDocs(q);
     const sameBranchRequests = snapshot.docs.map(doc => doc.data());
@@ -93,6 +93,13 @@ const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays })
       return;
     }
 
+    // 🔍 Validar si ya existe una solicitud aprobada para este empleado
+    const existingDoc = await getDoc(doc(db, "vacationRequests", user.id));
+    if (existingDoc.exists() && existingDoc.data().status === "approved") {
+      toast({ title: "Error", description: "Ya tienes una solicitud aprobada", variant: "destructive" });
+      return;
+    }
+
     setErrors([]);
     const request = {
       id: existingRequest?.id || `req-${Date.now()}`,
@@ -107,10 +114,10 @@ const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays })
       submittedAt: new Date().toISOString()
     };
 
-    // 🔥 Guardar en Firestore
+    // 🔥 Guardar en Firestore (colección vacationRequests)
     await setDoc(doc(collection(db, "vacationRequests"), request.id), request);
 
-    // 🔥 Actualizar días restantes del usuario
+    // 🔥 Actualizar días restantes en empleados
     await updateRemainingDays(user.id, dates.length);
 
     toast({ title: 'Solicitud enviada', description: 'Tus vacaciones se han registrado correctamente', variant: 'success' });

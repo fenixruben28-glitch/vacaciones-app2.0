@@ -12,15 +12,13 @@ import { db } from "@/firebase";
 
 /**
  * Obtener solicitudes de vacaciones
- * - Si el usuario es ADMIN001 → todas las solicitudes
- * - Si es usuario normal → solo las de su sucursal
  */
 export async function getVacations(currentUserId, sucursal) {
   let q;
   if (currentUserId === "ADMIN001") {
-    q = query(collection(db, "vacaciones")); // todas las solicitudes
+    q = query(collection(db, "vacationRequests")); // todas las solicitudes
   } else {
-    q = query(collection(db, "vacaciones"), where("sucursal", "==", sucursal));
+    q = query(collection(db, "vacationRequests"), where("branch", "==", sucursal));
   }
 
   const snapshot = await getDocs(q);
@@ -33,21 +31,22 @@ export async function getVacations(currentUserId, sucursal) {
 export async function requestVacation(userId, sucursal, startDate, endDate) {
   const requestedDays = getDateRange(startDate, endDate);
 
-  await addDoc(collection(db, "vacaciones"), {
-    userId,
+  await addDoc(collection(db, "vacationRequests"), {
+    employeeId: userId,
     sucursal,
     days: requestedDays,
     createdAt: new Date(),
+    status: "approved",
   });
 
   await updateRemainingDays(userId, requestedDays.length);
 }
 
 /**
- * Actualizar los días restantes de un usuario
+ * Actualizar los días restantes de un empleado
  */
 export async function updateRemainingDays(userId, requestedDaysCount) {
-  const userRef = doc(db, "usuarios", userId);
+  const userRef = doc(db, "empleados", userId);
   const userSnap = await getDoc(userRef);
 
   if (userSnap.exists()) {
@@ -59,7 +58,7 @@ export async function updateRemainingDays(userId, requestedDaysCount) {
       diasRestantes: nuevosDiasRestantes,
     });
   } else {
-    console.error("❌ El documento del usuario no existe en Firestore");
+    console.error("❌ El documento del empleado no existe en Firestore");
   }
 }
 

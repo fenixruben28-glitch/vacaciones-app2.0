@@ -9,15 +9,16 @@ function AdminPage({ currentUserId, sucursal }) {
   useEffect(() => {
     async function fetchData() {
       try {
+        // 🔥 Obtener solicitudes desde vacationRequests
         const data = await getVacations(currentUserId, sucursal);
 
-        // Enriquecer cada solicitud con los días restantes del usuario
+        // 🔥 Enriquecer cada solicitud con los días restantes del empleado
         const enrichedData = await Promise.all(
           data.map(async v => {
-            const userRef = doc(db, "usuarios", v.userId);
-            const userSnap = await getDoc(userRef);
-            const diasRestantes = userSnap.exists()
-              ? userSnap.data().diasRestantes
+            const empleadoRef = doc(db, "empleados", v.employeeId);
+            const empleadoSnap = await getDoc(empleadoRef);
+            const diasRestantes = empleadoSnap.exists()
+              ? empleadoSnap.data().diasRestantes
               : "N/A";
             return { ...v, diasRestantes };
           })
@@ -40,24 +41,26 @@ function AdminPage({ currentUserId, sucursal }) {
         <table border="1" cellPadding="8" style={{ marginTop: "10px", width: "100%" }}>
           <thead>
             <tr>
-              <th>Usuario</th>
+              <th>Empleado</th>
               <th>Sucursal</th>
+              <th>Departamento</th>
               <th>Días solicitados</th>
-              <th>Fecha de solicitud</th>
+              <th>Fecha inicio</th>
+              <th>Fecha fin</th>
+              <th>Estado</th>
               <th>Días restantes</th>
             </tr>
           </thead>
           <tbody>
             {vacaciones.map((v, i) => (
               <tr key={i}>
-                <td>{v.userId}</td>
-                <td>{v.sucursal}</td>
-                <td>{v.days?.join(", ")}</td>
-                <td>
-                  {v.createdAt
-                    ? new Date(v.createdAt.seconds * 1000).toLocaleDateString()
-                    : "-"}
-                </td>
+                <td>{v.employeeName}</td>
+                <td>{v.branch}</td>
+                <td>{v.department}</td>
+                <td>{v.dates?.join(", ")}</td>
+                <td>{v.startDate}</td>
+                <td>{v.endDate}</td>
+                <td>{v.status}</td>
                 <td>{v.diasRestantes}</td>
               </tr>
             ))}
