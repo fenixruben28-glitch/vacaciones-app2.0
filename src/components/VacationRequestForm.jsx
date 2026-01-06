@@ -5,14 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { db } from '@/firebase';
-import { collection, setDoc, doc, getDocs, query, where, getDoc } from 'firebase/firestore';
+import { collection, setDoc, doc, getDocs, query, where, getDoc, onSnapshot } from 'firebase/firestore';
 import { updateRemainingDays } from '@/services/vacaciones';
 
-const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays }) => {
+const VacationRequestForm = ({ user, onSubmit, existingRequest }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [errors, setErrors] = useState([]);
+  const [remainingDays, setRemainingDays] = useState(0);
   const { toast } = useToast();
+
+  // 🔥 Escuchar en tiempo real los días restantes del empleado
+  useEffect(() => {
+    const userRef = doc(db, "empleados", user.id);
+    const unsubscribe = onSnapshot(userRef, (snap) => {
+      if (snap.exists()) {
+        setRemainingDays(snap.data().diasRestantes);
+      }
+    });
+    return () => unsubscribe();
+  }, [user.id]);
 
   useEffect(() => {
     if (existingRequest?.dates?.length > 0) {
@@ -34,17 +46,13 @@ const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays })
   const validateRequest = async (dates) => {
     const validationErrors = [];
 
-    // Rule 0: Available Days Limit
     if (dates.length > 10) {
       validationErrors.push('No puede exceder el límite de 10 días anuales.');
     }
-
-    // Rule 1: Maximum 5 consecutive days
     if (dates.length > 5) {
       validationErrors.push('No puede solicitar más de 5 días consecutivos.');
     }
 
-    // Rule 2: Date Range Validity
     const validStart = new Date('2026-01-16');
     const validEnd = new Date('2027-01-15');
     const isRangeValid = dates.every(date => {
@@ -55,7 +63,6 @@ const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays })
       validationErrors.push('Las fechas deben estar dentro del periodo: 16 Ene 2026 - 15 Ene 2027');
     }
 
-    // Rule 3: Branch overlap check
     const q = query(collection(db, 'vacationRequests'), where('branch', '==', user.branch));
     const snapshot = await getDocs(q);
     const sameBranchRequests = snapshot.docs.map(doc => doc.data());
@@ -117,7 +124,7 @@ const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays })
     // 🔥 Guardar en Firestore (colección vacationRequests)
     await setDoc(doc(collection(db, "vacationRequests"), request.id), request);
 
-    // 🔥 Actualizar días restantes en empleados
+    // 🔥 Actualizar días restantes en empleados (con validación de no negativos)
     await updateRemainingDays(user.id, dates.length);
 
     toast({ title: 'Solicitud enviada', description: 'Tus vacaciones se han registrado correctamente', variant: 'success' });
@@ -140,6 +147,9 @@ const VacationRequestForm = ({ user, onSubmit, existingRequest, remainingDays })
       <h2 className="text-2xl font-bold text-gray-800 flex items-center mb-4">
         <Send className="w-6 h-6 mr-2 text-blue-600" /> Solicitud de Vacaciones
       </h2>
+      <p className="mb-4 text-gray-700 font-semibold">
+        Días disponibles: {remainingDays} / 10
+      </p>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>

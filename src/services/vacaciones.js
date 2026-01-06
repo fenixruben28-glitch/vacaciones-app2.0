@@ -12,11 +12,13 @@ import { db } from "@/firebase";
 
 /**
  * Obtener solicitudes de vacaciones
+ * - Admin ve todas las solicitudes
+ * - Empleado ve solo las de su sucursal
  */
 export async function getVacations(currentUserId, sucursal) {
   let q;
   if (currentUserId === "ADMIN001") {
-    q = query(collection(db, "vacationRequests")); // todas las solicitudes
+    q = query(collection(db, "vacationRequests")); // 🔥 Admin ve todas
   } else {
     q = query(collection(db, "vacationRequests"), where("branch", "==", sucursal));
   }
@@ -44,6 +46,7 @@ export async function requestVacation(userId, sucursal, startDate, endDate) {
 
 /**
  * Actualizar los días restantes de un empleado
+ * - Nunca baja de 0
  */
 export async function updateRemainingDays(userId, requestedDaysCount) {
   const userRef = doc(db, "empleados", userId);
@@ -52,7 +55,7 @@ export async function updateRemainingDays(userId, requestedDaysCount) {
   if (userSnap.exists()) {
     const data = userSnap.data();
     const diasRestantesActuales = data.diasRestantes ?? 10;
-    const nuevosDiasRestantes = diasRestantesActuales - requestedDaysCount;
+    const nuevosDiasRestantes = Math.max(0, diasRestantesActuales - requestedDaysCount);
 
     await updateDoc(userRef, {
       diasRestantes: nuevosDiasRestantes,
