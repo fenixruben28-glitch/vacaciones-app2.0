@@ -1,45 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
-import LoginPage from '@/components/LoginPage';
-import EmployeeDashboard from '@/components/EmployeeDashboard';
-import AdminDashboard from '@/components/AdminDashboard';
-import { Toaster } from '@/components/ui/toaster';
-import { employeeData } from '@/data/employeeData';
+import LoginPage from './components/LoginPage';
+import EmployeeDashboard from './components/EmployeeDashboard';
+import AdminDashboard from './components/AdminDashboard';
+import { Toaster } from './components/ui/toaster';
+import { db } from './firebase';
+import { collection, addDoc, onSnapshot } from 'firebase/firestore';
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [solicitudes, setSolicitudes] = useState([]);
 
   useEffect(() => {
-    // --- TEMPORARY: Clear all localStorage data as requested by user ---
-    // This code will clear ALL data from localStorage for this domain.
-    // Please remove this useEffect block after the data has been cleared and verified.
-    console.log("Clearing all localStorage data...");
-    localStorage.clear();
-    console.log("localStorage cleared.");
-    // --- END TEMPORARY CLEARING BLOCK ---
+    // Escuchar solicitudes en tiempo real desde Firestore
+    const unsubscribe = onSnapshot(collection(db, "solicitudes"), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setSolicitudes(data);
+    });
 
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
     setIsLoading(false);
-  }, []); // Empty dependency array ensures this runs once on mount
 
-  const handleLogin = (employeeId) => {
-    const employee = employeeData.find(emp => emp.id === employeeId);
-    if (employee) {
-      const userData = { ...employee };
-      setCurrentUser(userData);
-      localStorage.setItem('currentUser', JSON.stringify(userData));
-      return true;
-    }
-    return false;
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = async (employee) => {
+    // Aquí puedes validar contra tu colección de empleados en Firestore
+    setCurrentUser(employee);
+    return true;
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('currentUser');
+  };
+
+  const handleVacationRequest = async (fechaInicio, fechaFin) => {
+    if (!currentUser) return;
+
+    try {
+      await addDoc(collection(db, "solicitudes"), {
+        empleadoId: currentUser.id,
+        nombre: currentUser.name,
+        role: currentUser.role,
+        fechaInicio,
+        fechaFin,
+        estado: "pendiente",
+        createdAt: new Date()
+      });
+      console.log("Solicitud guardada en Firestore");
+    } catch (e) {
+      console.error("Error al guardar solicitud: ", e);
+    }
   };
 
   if (isLoading) {
@@ -70,7 +81,7 @@ function App() {
           <title>Panel de Administración - Gestión de Vacaciones</title>
           <meta name="description" content="Panel de administración para gestionar todas las solicitudes de vacaciones de empleados." />
         </Helmet>
-        <AdminDashboard user={currentUser} onLogout={handleLogout} />
+        <AdminDashboard user={currentUser} solicitudes={solicitudes} onLogout={handleLogout} />
         <Toaster />
       </>
     );
@@ -82,7 +93,7 @@ function App() {
         <title>Mi Panel de Vacaciones - {currentUser.name}</title>
         <meta name="description" content="Solicite y administre sus períodos de vacaciones de forma fácil y rápida." />
       </Helmet>
-      <EmployeeDashboard user={currentUser} onLogout={handleLogout} />
+      <EmployeeDashboard user={currentUser} onLogout={handleLogout} onRequestVacation={handleVacationRequest} solicitudes={solicitudes} />
       <Toaster />
     </>
   );
