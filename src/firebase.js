@@ -16,10 +16,10 @@ const firebaseConfig = {
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-// Inicializar Firestore
+// Firestore
 const db = getFirestore(app);
 
-// Inicializar Analytics (solo en navegador)
+// Analytics (solo navegador)
 let analytics;
 if (typeof window !== "undefined") {
   analytics = getAnalytics(app);
