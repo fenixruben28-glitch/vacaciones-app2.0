@@ -1,9 +1,13 @@
-import { seedEmployees } from './lib/seedEmployees.js';
+import { db } from "./firebaseNode.js";
+import { collection, addDoc } from "firebase/firestore";
 
-const run = async () => {
-  await seedEmployees();
-  console.log("✅ Seeding terminado. Puedes borrar este archivo si ya no lo necesitas.");
-  process.exit(0); // Finaliza el proceso correctamente
-};
+async function seedEmployees() {
+  await addDoc(collection(db, "empleados"), {
+    nombre: "Juan Pérez",
+    diasRestantes: 10,
+  });
+  console.log("Empleado insertado");
+}
 
-run();
+seedEmployees();
+
