@@ -4,6 +4,7 @@ import LoginPage from './components/LoginPage';
 import EmployeeDashboard from './components/EmployeeDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import { Toaster } from './components/ui/toaster';
+import { useToast } from './components/ui/use-toast';   // 👈 Importa el hook
 import { db } from './firebase';
 import { collection, addDoc, onSnapshot } from 'firebase/firestore';
 
@@ -11,6 +12,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [solicitudes, setSolicitudes] = useState([]);
+  const { toast } = useToast();   // 👈 Inicializa el hook
 
   useEffect(() => {
     // Escuchar solicitudes en tiempo real desde Firestore
@@ -20,18 +22,31 @@ function App() {
     });
 
     setIsLoading(false);
-
     return () => unsubscribe();
   }, []);
 
   const handleLogin = async (employee) => {
-    // Aquí puedes validar contra tu colección de empleados en Firestore
     setCurrentUser(employee);
+
+    // 🔥 Toast de login exitoso
+    toast({
+      title: "Bienvenido",
+      description: `Has iniciado sesión como ${employee.name}`,
+      variant: "success",
+    });
+
     return true;
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+
+    // 🔥 Toast de logout
+    toast({
+      title: "Sesión cerrada",
+      description: "Has cerrado sesión correctamente",
+      variant: "default",
+    });
   };
 
   const handleVacationRequest = async (fechaInicio, fechaFin) => {
@@ -47,9 +62,23 @@ function App() {
         estado: "pendiente",
         createdAt: new Date()
       });
-      console.log("Solicitud guardada en Firestore");
+
+      // 🔥 Toast de éxito
+      toast({
+        title: "Solicitud enviada",
+        description: "Tus vacaciones se han registrado correctamente",
+        variant: "success",
+      });
+
     } catch (e) {
       console.error("Error al guardar solicitud: ", e);
+
+      // 🔥 Toast de error
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la solicitud",
+        variant: "destructive",
+      });
     }
   };
 
@@ -69,7 +98,7 @@ function App() {
           <meta name="description" content="Sistema de gestión de vacaciones para empleados. Ingrese con su ID de empleado para solicitar y administrar sus vacaciones." />
         </Helmet>
         <LoginPage onLogin={handleLogin} />
-        <Toaster />
+        <Toaster /> {/* 👈 Siempre montado */}
       </>
     );
   }
@@ -93,7 +122,12 @@ function App() {
         <title>Mi Panel de Vacaciones - {currentUser.name}</title>
         <meta name="description" content="Solicite y administre sus períodos de vacaciones de forma fácil y rápida." />
       </Helmet>
-      <EmployeeDashboard user={currentUser} onLogout={handleLogout} onRequestVacation={handleVacationRequest} solicitudes={solicitudes} />
+      <EmployeeDashboard
+        user={currentUser}
+        onLogout={handleLogout}
+        onRequestVacation={handleVacationRequest}
+        solicitudes={solicitudes}
+      />
       <Toaster />
     </>
   );

@@ -1,27 +1,20 @@
-// Importa las funciones necesarias del SDK de Firebase
 import { initializeApp } from "firebase/app";
-import { getAuth, signInAnonymously } from "firebase/auth";
-import { getFirestore, serverTimestamp } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
+import dotenv from "dotenv";
 
-// Configuración de Firebase usando variables de entorno
+// Cargar variables de entorno desde .env (solo en Node)
+dotenv.config();
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_FIREBASE_APP_ID,
+  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Inicializa la app de Firebase
 const app = initializeApp(firebaseConfig);
-
-// Exporta los servicios que vas a usar
-export const auth = getAuth(app);
 export const db = getFirestore(app);
-export { serverTimestamp };
 
-// Función opcional para iniciar sesión con ID de empleado
-export async function loginWithEmployeeId(employeeId, fetchEmployee) {
-  await signInAnonymously(auth);
-  const user = await fetchEmployee(employeeId); // busca en la colección "employees"
-  return user || null;
-}
