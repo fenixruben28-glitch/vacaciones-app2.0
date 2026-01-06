@@ -1,8 +1,8 @@
 // src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
 
-// Configuración de Firebase usando variables de entorno
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -16,10 +16,13 @@ const firebaseConfig = {
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-// Inicializar Analytics (solo si está disponible en el navegador)
+// Inicializar Firestore
+const db = getFirestore(app);
+
+// Inicializar Analytics (solo en navegador)
 let analytics;
 if (typeof window !== "undefined") {
   analytics = getAnalytics(app);
 }
 
-export { app, analytics };
+export { app, db, analytics };
