@@ -7,7 +7,7 @@
     "dev": "vite --host :: --port 3000",
     "build": "vite build",
     "preview": "vite preview --host :: --port 3000",
-    "seed": "node src/lib/seedEmployees.js"   
+    "seed": "node src/seed.js"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.4",
